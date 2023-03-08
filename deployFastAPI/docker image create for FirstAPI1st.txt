@@ -1,0 +1,23 @@
+--requirements check from VS code terminal
+pip freeze
+
+--Create a Dockerfile: In your project directory
+    FROM python:3.9
+
+    WORKDIR /docker/FisrtAPI1st
+
+    COPY requirements.txt requirements.txt
+    RUN pip install -r requirements.txt
+
+    COPY . .
+
+    EXPOSE 8000
+
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+--To build the Docker image, navigate to the directory containing your Dockerfile and run the following command:
+cd /docker/FisrtAPI1st
+docker build -t my-fastapi-app .
+
+docker run -p 8000:8000 my-fastapi-app
+

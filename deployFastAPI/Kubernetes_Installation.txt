@@ -1,0 +1,110 @@
+--https://tekneed.com/how-to-install-kubernetes-cluster-using-minikube/
+[root@ahosan1 ~]# lscpu | grep Virtualization
+Virtualization type: full
+
+[root@ahosan1 ~]# lsmod | grep kvm
+[root@ahosan1 ~]# systemctl start libvirtd
+[root@ahosan1 ~]# systemctl status libvirtd
+[root@ahosan1 ~]# dnf install @virt -y
+[root@ahosan1 ~]# systemctl restart libvirtd
+
+--for RHEL9 only
+[root@snk ~]# dnf install qemu-kvm libvirt virt-install virt-viewer -y
+[root@ahosan1 ~]# systemctl status libvirtd
+
+[root@ahosan1 ~]# curl -LO https://storage.googleapis.com/minikube/releases/latest/docker-machine-driver-kvm2
+[root@ahosan1 ~]# ls -l docker-machine-driver-kvm2
+-rw-r--r--. 1 root root 12902296 Mar  5 18:29 docker-machine-driver-kvm2
+[root@ahosan1 ~]# chmod +x docker-machine-driver-kvm2
+[root@ahosan1 ~]# ls -l docker-machine-driver-kvm2
+-rwxr-xr-x. 1 root root 12902296 Mar  5 18:29 docker-machine-driver-kvm2
+[root@ahosan1 ~]# mv docker-machine-driver-kvm2 /usr/local/bin/
+[root@ahosan1 ~]# cp docker-machine-driver-kvm2 /usr/local/bin/docker-machine-driver-kvm2-bkp
+[root@ahosan1 ~]# cp docker-machine-driver-kvm2 /usr/local/bin/kvm2
+[root@ahosan1 ~]# docker-machine-driver-kvm2 version
+version: v1.29.0
+commit: ddac20b4b34a9c8c857fc602203b6ba2679794d3
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+[root@ahosan1 ~]# chmod +x kubectl
+[root@ahosan1 ~]# mv kubectl  /usr/local/bin/
+[root@ahosan1 ~]# kubectl version -o yaml
+clientVersion:
+  buildDate: "2023-02-22T13:39:03Z"
+  compiler: gc
+  gitCommit: fc04e732bb3e7198d2fa44efa5457c7c6f8c0f5b
+  gitTreeState: clean
+  gitVersion: v1.26.2
+  goVersion: go1.19.6
+  major: "1"
+  minor: "26"
+  platform: linux/amd64
+kustomizeVersion: v4.5.7
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# wget https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+[root@ahosan1 ~]# chmod +x minikube-linux-amd64
+[root@ahosan1 ~]# mv minikube-linux-amd64 /usr/local/bin/minikube
+[root@ahosan1 ~]# minikube version
+minikube version: v1.29.0
+commit: ddac20b4b34a9c8c857fc602203b6ba2679794d3
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# useradd cont
+[root@ahosan1 ~]# usermod -aG libvirt cont
+[root@ahosan1 ~]# usermod -aG wheel cont
+[root@ahosan1 ~]# id cont   #pass:cont
+uid=1001(cont) gid=1001(cont) groups=1001(cont),10(wheel),980(libvirt)
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# minikube config set vm-driver kvm2
+! These changes will take effect upon a minikube delete and then a minikube start
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# usermod -G wheel cont
+[root@ahosan1 ~]# su - cont
+[cont@ahosan1 ~]$ sudo whoami
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+[sudo] password for cont:
+root
+[cont@ahosan1 ~]$ vi /etc/sudoers
+        ## Allows people in group wheel to run all commands
+        #%wheel ALL=(ALL)       ALL
+        ## Same thing without a password
+        %wheel  ALL=(ALL)       NOPASSWD: ALL
+
+[root@ahosan1 ~]# ssh cont@localhost
+cont@localhost's password:
+
+--from root user
+[root@ahosan1 ~]# minikube start --force
+
+[root@ahosan1 ~]# minikube status
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# kubectl cluster-info
+Kubernetes control plane is running at https://192.168.39.70:8443
+CoreDNS is running at https://192.168.39.70:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+[root@ahosan1 ~]#
+
+[root@ahosan1 ~]# kubectl version -o yaml
+
+[root@ahosan1 ~]# kubectl get nodes
+NAME       STATUS   ROLES           AGE     VERSION
+minikube   Ready    control-plane   3m14s   v1.26.1
+[root@ahosan1 ~]#
+

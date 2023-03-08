@@ -1,0 +1,137 @@
+[root@ahosan1 FisrtAPI1st]# eval $(minikube docker-env)
+[root@ahosan1 FisrtAPI1st]#
+[root@ahosan1 FisrtAPI1st]# docker ps
+CONTAINER ID   IMAGE                       COMMAND                  CREATED          STATUS          PORTS     NAMES
+4816ef72501c   5185b96f0bec                "/coredns -conf /etc…"   20 minutes ago   Up 20 minutes             k8s_coredns_coredns-787d4945fb-6d7qq_kube-system_e2142e23-8c0c-4e21-8392-a195b49473d6_1
+3f46f7a93def   registry.k8s.io/pause:3.6   "/pause"                 20 minutes ago   Up 20 minutes             k8s_POD_coredns-787d4945fb-6d7qq_kube-system_e2142e23-8c0c-4e21-8392-a195b49473d6_1
+d39ed8906b7e   6e38f40d628d                "/storage-provisioner"   20 minutes ago   Up 20 minutes             k8s_storage-provisioner_storage-provisioner_kube-system_ec073945-593e-4afd-9444-672daf9210e3_2
+0b06718e1b92   46a6bb3c77ce                "/usr/local/bin/kube…"   21 minutes ago   Up 21 minutes             k8s_kube-proxy_kube-proxy-jfbxv_kube-system_4add6b28-b1ae-44fd-bedf-11eab6a94016_1
+c4e0b43d5739   registry.k8s.io/pause:3.6   "/pause"                 21 minutes ago   Up 21 minutes             k8s_POD_kube-proxy-jfbxv_kube-system_4add6b28-b1ae-44fd-bedf-11eab6a94016_1
+f02206323923   registry.k8s.io/pause:3.6   "/pause"                 21 minutes ago   Up 21 minutes             k8s_POD_storage-provisioner_kube-system_ec073945-593e-4afd-9444-672daf9210e3_1
+2787941d334c   655493523f60                "kube-scheduler --au…"   22 minutes ago   Up 22 minutes             k8s_kube-scheduler_kube-scheduler-minikube_kube-system_197cd0de602d7cb722d0bd2daf878121_1
+00c86e9dfb31   fce326961ae2                "etcd --advertise-cl…"   22 minutes ago   Up 22 minutes             k8s_etcd_etcd-minikube_kube-system_ea6d71cad4c06996c1358d47f2ab20ba_1
+9631761d9a71   deb04688c4a3                "kube-apiserver --ad…"   22 minutes ago   Up 22 minutes             k8s_kube-apiserver_kube-apiserver-minikube_kube-system_c39d3d81a709f35ba5f800c9afc01c38_1
+58b4efef965a   e9c08e11b07f                "kube-controller-man…"   22 minutes ago   Up 22 minutes             k8s_kube-controller-manager_kube-controller-manager-minikube_kube-system_96939d3d2117efe8f605629d47b5f330_1
+a21f9c9ca18c   registry.k8s.io/pause:3.6   "/pause"                 22 minutes ago   Up 22 minutes             k8s_POD_kube-scheduler-minikube_kube-system_197cd0de602d7cb722d0bd2daf878121_1
+7de93611e334   registry.k8s.io/pause:3.6   "/pause"                 22 minutes ago   Up 22 minutes             k8s_POD_kube-controller-manager-minikube_kube-system_96939d3d2117efe8f605629d47b5f330_1
+559fbe328f01   registry.k8s.io/pause:3.6   "/pause"                 22 minutes ago   Up 22 minutes             k8s_POD_etcd-minikube_kube-system_ea6d71cad4c06996c1358d47f2ab20ba_1
+59d3ed172cbc   registry.k8s.io/pause:3.6   "/pause"                 22 minutes ago   Up 22 minutes             k8s_POD_kube-apiserver-minikube_kube-system_c39d3d81a709f35ba5f800c9afc01c38_1
+[root@ahosan1 FisrtAPI1st]#
+
+
+--requirements check from VS code terminal
+pip freeze
+--Create a Dockerfile: In your project directory
+    FROM python:3.9
+
+    WORKDIR /docker/FisrtAPI1st
+
+    COPY requirements.txt requirements.txt
+    RUN pip install -r requirements.txt
+
+    COPY . .
+
+    EXPOSE 8000
+
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+--To build the Docker image, navigate to the directory containing your Dockerfile and run the following command:
+cd /docker/FisrtAPI1st
+docker build -t my-fastapi-app .
+
+[root@ahosan1 docker]# cd /docker/
+[root@ahosan1 docker]# vim api.yaml
+##########################################Service & Deployment############################################
+# my-fastapi-app Deployment
+# Defines the deployment of the app running in a pod on any worker node
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-fastapi-app
+  labels:
+    app: my-fastapi-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-fastapi-app
+  template:
+    metadata:
+      labels:
+        app: my-fastapi-app
+    spec:
+      containers:
+        - name: my-fastapi-app
+          image: my-fastapi-app:latest
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: IfNotPresent
+
+# my-fastapi-app LoadBalancer Service
+# Enables the pods in a deployment to be accessible from outside the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-fastapi-app-svc
+spec:
+  selector:
+    app: my-fastapi-app
+  ports:
+    - protocol: "TCP"
+      port: 8000
+      targetPort: 8000
+  type: LoadBalancer
+##########################################Service & Deployment############################################
+[root@ahosan1 docker]# kubectl delete pod my-fastapi-app-7845d47576-v4scw
+[root@ahosan1 docker]# kubectl delete pod my-fastapi-app-7845d47576-6zmst
+
+[root@ahosan1 docker]# kubectl apply -f api.yaml
+service/my-fastapi-app-svc created
+[root@ahosan1 docker]#
+
+[root@ahosan1 docker]# kubectl get pods
+NAME                              READY   STATUS    RESTARTS   AGE
+my-fastapi-app-7845d47576-v4scw   1/1     Running   0          2m10s
+[root@ahosan1 docker]# kubectl get svc my-fastapi-app-svc
+NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+my-fastapi-app-svc   LoadBalancer   10.102.123.233   <pending>     8000:31493/TCP   2m30s
+[root@ahosan1 docker]#
+
+--run it from another terminal
+[root@ahosan1 docker]# minikube tunnel
+Status:
+        machine: minikube
+        pid: 4221
+        route: 10.96.0.0/12 -> 192.168.39.70
+        minikube: Running
+        services: [my-fastapi-app-svc]
+    errors:
+                minikube: no errors
+                router: no errors
+                loadbalancer emulator: no errors
+
+[root@ahosan1 docker]# kubectl get svc my-fastapi-app-svc
+NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP      PORT(S)          AGE
+my-fastapi-app-svc   LoadBalancer   10.102.123.233   10.102.123.233   8000:31493/TCP   22m
+[root@ahosan1 docker]#
+
+[root@ahosan1 docker]# curl -X 'GET' \
+  'http://10.102.123.233:8000/items' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json'
+
+[root@ahosan1 docker]# curl -X 'POST' \
+  'http://10.102.123.233:8000/items' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id":3,
+    "name":"Ahosan Habib",
+    "price":60000,
+    "description":"Nice",
+    "on_offer":true
+}'
+
+[root@ahosan1 docker]# kubectl describe svc my-fastapi-app-svc
+[root@ahosan1 docker]# minikube service my-fastapi-app-svc
+
